@@ -1,0 +1,43 @@
+#!/bin/sh
+
+set -e
+
+echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Installing required packages"
+PKG_LIB=""
+PKG_DEV="bash git grep"
+docker-install -r -u ${PKG_LIB} ${PKG_DEV}
+echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
+echo
+
+echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Downloading bootstrap"
+mkdir -p /build
+cd /build
+wget --no-check-certificate -q https://bitbucket.org/forumi0721/docker-dist-files/raw/master/image.sh
+chmod 755 image.sh
+git clone https://forumi0721@bitbucket.org/forumi0721/docker-dist-extras.git extras --depth=1
+cd /
+echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
+echo
+
+echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Executing bootstrap"
+cd /build
+if [ "${TARGET_ARCH}" = "aarch64" ]; then
+	cp extras/qemu-aarch64-static /usr/bin/
+elif [ "${TARGET_ARCH}" = "armhf" ]; then
+	cp extras/qemu-arm-static /usr/bin/
+fi
+./image.sh -d alpine -a ${TARGET_ARCH} -q
+cd /
+echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
+echo
+
+echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Uninstalling unnecessary packages"
+docker-install -d -c ${PKG_DEV}
+if [ "${TARGET_ARCH}" = "aarch64" ]; then
+	rm -rf /usr/bin/
+elif [ "${TARGET_ARCH}" = "armhf" ]; then
+	rm -rf /usr/bin/
+fi
+echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
+echo
+
