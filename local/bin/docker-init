@@ -34,9 +34,9 @@ echo
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Uninstalling unnecessary packages"
 docker-install -d -c ${PKG_DEV}
 if [ "${TARGET_ARCH}" = "aarch64" ]; then
-	rm -rf /usr/bin/
+	rm -rf /usr/bin/qemu-aarch64-static
 elif [ "${TARGET_ARCH}" = "armhf" ]; then
-	rm -rf /usr/bin/
+	rm -rf /usr/bin/qemu-arm-static
 fi
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
 echo

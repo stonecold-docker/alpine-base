@@ -10,8 +10,6 @@ COPY local/. /usr/local/
 
 RUN ["docker-init"]
 
-ENTRYPOINT ["docker-run"]
-
 
 
 FROM scratch
