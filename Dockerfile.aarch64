@@ -1,6 +1,6 @@
 ARG BUILD_ARCH=x64
 
-FROM forumi0721/alpine-${BUILD_ARCH}-base as builder
+FROM forumi0721/alpine-${BUILD_ARCH}-base:latest as builder
 
 LABEL maintainer="forumi0721@gmail.com"
 
