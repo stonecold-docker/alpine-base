@@ -22,8 +22,14 @@ echo
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Executing bootstrap"
 cd /build
 if [ "${TARGET_ARCH}" = "aarch64" ]; then
+	if [ -e /usr/local/bin/qemu-aarch64-static ]; then
+		cp /usr/local/bin/qemu-aarch64-static extras/qemu-aarch64-static
+	fi
 	cp extras/qemu-aarch64-static /usr/bin/
 elif [ "${TARGET_ARCH}" = "armhf" ]; then
+	if [ -e /usr/local/bin/qemu-arm-static ]; then
+		cp /usr/local/bin/qemu-arm-static extras/qemu-arm-static
+	fi
 	cp extras/qemu-arm-static /usr/bin/
 fi
 ./image.sh -d alpine -a ${TARGET_ARCH} -q
