@@ -16,5 +16,11 @@ FROM scratch
 
 COPY --from=builder /build/dist/dist-alpine-armhf /
 
+RUN ["docker-build-start"]
+
+RUN ["docker-init"]
+
+RUN ["docker-build-end"]
+
 ENTRYPOINT ["docker-run"]
 

@@ -10,6 +10,7 @@ echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
 echo
 
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Downloading bootstrap"
+TARGET_ARCH=${TARGET_ARCH:-x64}
 mkdir -p /build
 cd /build
 wget --no-check-certificate -q https://bitbucket.org/forumi0721/docker-dist-files/raw/master/image.sh
@@ -33,17 +34,23 @@ elif [ "${TARGET_ARCH}" = "armhf" ]; then
 	cp extras/qemu-arm-static /usr/bin/
 fi
 ./image.sh -d alpine -a ${TARGET_ARCH} -q
+cd /build/dist/dist-*
+mkdir -p usr/local/bin
+echo "#!/bin/sh" > usr/local/bin/docker-init
+echo >> usr/local/bin/docker-init
+find . -exec stat -c "chmod %a \"%n\"" "{}" \; | grep -v '^chmod [0-9][0-9][0-9] ' | sed -e 's/^\(chmod [0-9]\+\) "\./\1 "/g' >> usr/local/bin/docker-init
+chmod 755 usr/local/bin/docker-init
 cd /
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
 echo
 
-echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Uninstalling unnecessary packages"
-docker-install -d -c ${PKG_DEV}
-if [ "${TARGET_ARCH}" = "aarch64" ]; then
-	rm -rf /usr/bin/qemu-aarch64-static
-elif [ "${TARGET_ARCH}" = "armhf" ]; then
-	rm -rf /usr/bin/qemu-arm-static
-fi
-echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
-echo
+#echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Uninstalling unnecessary packages"
+#docker-install -d -c ${PKG_DEV}
+#if [ "${TARGET_ARCH}" = "aarch64" ]; then
+#	rm -rf /usr/bin/qemu-aarch64-static
+#elif [ "${TARGET_ARCH}" = "armhf" ]; then
+#	rm -rf /usr/bin/qemu-arm-static
+#fi
+#echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
+#echo
 

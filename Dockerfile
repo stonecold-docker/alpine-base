@@ -16,5 +16,11 @@ FROM scratch
 
 COPY --from=builder /build/dist/dist-alpine-x64 /
 
+#RUN ["docker-build-start"]
+
+RUN ["docker-init"]
+
+#RUN ["docker-build-end"]
+
 ENTRYPOINT ["docker-run"]
 
