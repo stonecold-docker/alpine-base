@@ -1,6 +1,6 @@
 ARG BUILD_ARCH=x64
 
-FROM forumi0721debian${BUILD_ARCH}build/debian-${BUILD_ARCH}-qemu-static-builder:latest as qemu
+#FROM forumi0721debian${BUILD_ARCH}build/debian-${BUILD_ARCH}-qemu-static-builder:latest as qemu
 
 FROM forumi0721/alpine-${BUILD_ARCH}-base:latest as builder
 
@@ -10,7 +10,7 @@ ENV TARGET_ARCH=armhf
 
 COPY local/. /usr/local/
 
-COPY --from=qemu /output/qemu-static /usr/local/bin
+#COPY --from=qemu /output/qemu-static /usr/local/bin
 
 RUN ["docker-init"]
 
