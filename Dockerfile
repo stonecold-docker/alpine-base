@@ -1,6 +1,6 @@
-ARG BUILD_TAG=latest
+ARG BUILDER=forumi0721/alpine-base:latest
 
-FROM forumi0721/alpine-base:${BUILD_TAG} as builder
+FROM ${BUILDER} as builder
 
 LABEL maintainer="forumi0721@gmail.com"
 

@@ -1,6 +1,6 @@
-ARG BUILD_TAG=aarch64
+ARG BUILDER=forumi0721/alpine-base:latest
 
-FROM forumi0721/alpine-base:aarch64 as builder
+FROM ${BUILDER} as builder
 
 LABEL maintainer="forumi0721@gmail.com"
 
