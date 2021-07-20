@@ -27,11 +27,6 @@ if [ "${TARGET_ARCH}" = "aarch64" ]; then
 		cp /usr/local/bin/qemu-aarch64-static extras/qemu-aarch64-static
 	fi
 	cp extras/qemu-aarch64-static /usr/bin/
-elif [ "${TARGET_ARCH}" = "armhf" ]; then
-	if [ -e /usr/local/bin/qemu-arm-static ]; then
-		cp /usr/local/bin/qemu-arm-static extras/qemu-arm-static
-	fi
-	cp extras/qemu-arm-static /usr/bin/
 fi
 ./image.sh -d alpine -a ${TARGET_ARCH} -q
 cd /build/dist/dist-*
@@ -43,14 +38,4 @@ chmod 755 usr/local/bin/docker-init
 cd /
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
 echo
-
-#echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Uninstalling unnecessary packages"
-#docker-install -d -c ${PKG_DEV}
-#if [ "${TARGET_ARCH}" = "aarch64" ]; then
-#	rm -rf /usr/bin/qemu-aarch64-static
-#elif [ "${TARGET_ARCH}" = "armhf" ]; then
-#	rm -rf /usr/bin/qemu-arm-static
-#fi
-#echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
-#echo
 
