@@ -8,8 +8,6 @@ ENV TARGET_ARCH=x64
 
 COPY local/. /usr/local/
 
-#COPY --from=qemu /output/qemu-static /usr/local/bin
-
 RUN ["docker-init"]
 
 

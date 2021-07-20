@@ -2,12 +2,15 @@
 ![Docker Pulls](https://img.shields.io/docker/pulls/forumi0721/alpine-base)
 ![Docker Stars](https://img.shields.io/docker/stars/forumi0721/alpine-base)
 
-#### x86_64
+
+
+----------------------------------------
+### x86_64
 ![Docker Image Version](https://img.shields.io/docker/v/forumi0721/alpine-base/latest)
 ![Docker Image Size](https://img.shields.io/docker/image-size/forumi0721/alpine-base/latest)
-#### aarch64
-![Docker Image Version (tag latest semver)](https://img.shields.io/docker/v/forumi0721/alpine-base/aarch64)
-![Docker Image Size (tag)](https://img.shields.io/docker/image-size/forumi0721/alpine-base/aarch64)
+### aarch64
+![Docker Image Version](https://img.shields.io/docker/v/forumi0721/alpine-base/aarch64)
+![Docker Image Size](https://img.shields.io/docker/image-size/forumi0721/alpine-base/aarch64)
 
 
 
@@ -25,7 +28,7 @@
 
 ```sh
 docker run -i -t --rm \
-           forumi0721/alpine-base:[tag]
+           forumi0721/alpine-base:[ARCH_TAG]
 ```
 
 
@@ -34,7 +37,7 @@ docker run -i -t --rm \
 #### Usage
 
 ```dockerfile
-FROM forumi0721/alpine-base:[tag]
+FROM forumi0721/alpine-base:[ARCH_TAG]
 
 #For cross compile on dockerhub (aarch64)
 RUN ["docker-build-start"]
