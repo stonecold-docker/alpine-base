@@ -1,6 +1,6 @@
 ARG BUILD_TAG=latest
 
-FROM --platform=linux/amd64 forumi0721/alpine-buildbase:${BUILD_TAG} as builder
+FROM forumi0721/alpine-buildbase:${BUILD_TAG} as builder
 
 LABEL maintainer="forumi0721@gmail.com"
 
@@ -12,7 +12,7 @@ RUN ["docker-init"]
 
 
 
-FROM --platform=linux/arm64 scratch
+FROM scratch
 
 LABEL maintainer="forumi0721@gmail.com"
 
