@@ -16,7 +16,7 @@ FROM scratch
 
 LABEL maintainer="forumi0721@gmail.com"
 
-COPY --from=builder /build/dist/dist-alpine-x64 /
+COPY --from=builder /build/dist/dist-alpine-latest /
 
 #RUN ["docker-build-start"]
 
