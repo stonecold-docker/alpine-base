@@ -12,8 +12,7 @@ echo
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Downloading bootstrap"
 mkdir -p /build
 cd /build
-#wget --no-check-certificate -q https://bitbucket.org/forumi0721/docker-dist-files/raw/master/imagex.sh
-cp /usr/local/bin/imagex.sh ./
+wget --no-check-certificate -q https://bitbucket.org/forumi0721/docker-dist-files/raw/master/imagex.sh
 chmod +x imagex.sh
 git clone https://forumi0721@bitbucket.org/forumi0721/docker-dist-extras.git extras --depth=1
 #if [ "$(uname -m)" = "x86_64" -a "${BUILD_TAG}" = "aarch64" -a ! -e /usr/bin/qemu-aarch64-static ]; then
