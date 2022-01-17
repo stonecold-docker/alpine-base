@@ -11,6 +11,9 @@
 ### aarch64
 ![Docker Image Version](https://img.shields.io/docker/v/forumi0721/alpine-base/aarch64)
 ![Docker Image Size](https://img.shields.io/docker/image-size/forumi0721/alpine-base/aarch64)
+### armv7
+![Docker Image Version](https://img.shields.io/docker/v/forumi0721/alpine-base/aarch64)
+![Docker Image Size](https://img.shields.io/docker/image-size/forumi0721/alpine-base/aarch64)
 
 
 
@@ -18,7 +21,7 @@
 #### Description
 
 * Distribution : [Alpine Linux](https://alpinelinux.org/)
-* Architecture : x64,aarch64
+* Architecture : x64,aarch64,armv7
 * Appplication : -
 
 
@@ -39,13 +42,7 @@ docker run -i -t --rm \
 ```dockerfile
 FROM forumi0721/alpine-base:[ARCH_TAG]
 
-#For cross compile on dockerhub (aarch64)
-RUN ["docker-build-start"]
-
 RUN 'build-code'
-
-#For cross compile on dockerhub  (aarch64)
-RUN ["docker-build-end"]
 ```
 
 
