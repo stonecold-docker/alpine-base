@@ -15,11 +15,9 @@ cd /build
 wget --no-check-certificate -q https://bitbucket.org/forumi0721/docker-dist-files/raw/master/imagex.sh
 chmod +x imagex.sh
 git clone https://forumi0721@bitbucket.org/forumi0721/docker-dist-extras.git extras --depth=1
-#if [ "$(uname -m)" = "x86_64" -a "${BUILD_TAG}" = "aarch64" -a ! -e /usr/bin/qemu-aarch64-static ]; then
 if [ "$(uname -m)" = "x86_64" -a "${BUILD_TAG}" = "aarch64" ]; then
 	cp extras/qemu-aarch64-static /usr/bin
 	chmod +x /usr/bin/qemu-aarch64-static
-#elif [ "$(uname -m)" = "x86_64" -a "${BUILD_TAG}" = "armv7" -a ! -e /usr/bin/qemu-arm-static ]; then
 elif [ "$(uname -m)" = "x86_64" -a "${BUILD_TAG}" = "armv7" ]; then
 	cp extras/qemu-arm-static /usr/bin
 	chmod +x /usr/bin/qemu-arm-static
@@ -30,7 +28,7 @@ echo
 
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Executing bootstrap"
 cd /build
-./imagex.sh -d alpine -a ${BUILD_TAG:-amd64} -q
+./imagex.sh -d alpine -a ${BUILD_TAG:-x64} -q
 cd /
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
 echo
