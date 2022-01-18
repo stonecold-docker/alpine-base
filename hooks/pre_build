@@ -1,4 +1,4 @@
 #!/bin/bash
 
-docker run --rm --privileged multiarch/qemu-user-static:register --reset
+docker run --rm --privileged forumi0721/multiarch-register:latest
 
