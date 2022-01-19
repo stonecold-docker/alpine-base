@@ -1,4 +1,4 @@
 #!/bin/bash
 
-docker run --rm --privileged forumi0721/multiarch-register:latest
+docker run --privileged -t --rm forumi0721/multiarch-qemu:latest register
 
