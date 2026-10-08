@@ -2,7 +2,7 @@ FROM forumi0721/alpine-base:latest as builder
 
 LABEL maintainer="forumi0721@gmail.com"
 
-ARG BUILD_EDITION=latest-stable
+ARG BUILD_EDITION=latest
 
 COPY local/. /usr/local/
 

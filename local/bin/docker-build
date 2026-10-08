@@ -2,7 +2,7 @@
 
 set -e
 
-echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Installing packages"
+echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Installing required packages"
 PKG_LIB=""
 PKG_DEV="sudo bash git grep util-linux losetup e2fsprogs tzdata"
 docker-install -r -u ${PKG_LIB} ${PKG_DEV}
@@ -10,23 +10,21 @@ echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
 echo
 
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Executing bootstrap"
-#config
+#variables
 TARGET_OUTPUT="/output"
 TARGET_TIMEZONE="Asia/Seoul"
 TARGET_LOCALE="ko_KR.UTF-8"
 
-ALPINE_EDITION="${ALPINE_EDITION:-edge}"
-echo "Current version : ${ALPINE_EDITION}"
-
+ALPINE_EDITION="${BUILD_EDITION:-edge}"
+if [ "${ALPINE_EDITION}" = "latest" ]; then
+	ALPINE_EDITION="latest-stable"
+fi
 ALPINE_ARCH=$(uname -m)
-
 ALPINE_MIRROR=http://mirror.xtom.com.hk/alpine
 
-chroot_cmd() {
-	PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin LANG=C LC_ALL=C chroot "${TARGET_OUTPUT}" "${@}"
-}
+echo "Current version : ${ALPINE_EDITION}"
 
-#skel
+#basic  
 mkdir -p ${TARGET_OUTPUT}/usr/bin ${TARGET_OUTPUT}/usr/sbin ${TARGET_OUTPUT}/usr/lib
 ln -s usr/bin ${TARGET_OUTPUT}/bin
 ln -s usr/sbin ${TARGET_OUTPUT}/sbin
@@ -34,7 +32,7 @@ ln -s usr/lib ${TARGET_OUTPUT}/lib
 
 #init
 apk --repository ${ALPINE_MIRROR}/latest-stable/main --no-cache --no-script --allow-untrusted --root "${TARGET_OUTPUT}" --initdb add busybox alpine-baselayout alpine-keys apk-tools libc-utils alpine-release
-chroot_cmd /usr/bin/busybox --install -s
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin LANG=C LC_ALL=C chroot "${TARGET_OUTPUT}" /usr/bin/busybox --install -s
 
 #mirror
 if [ "${ALPINE_EDITION}" = "edge" ]; then
