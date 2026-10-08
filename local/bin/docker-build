@@ -4,7 +4,7 @@ set -e
 
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Installing required packages"
 PKG_LIB=""
-PKG_DEV="sudo bash git grep util-linux losetup e2fsprogs tzdata"
+PKG_DEV="tzdata"
 docker-install -r -u ${PKG_LIB} ${PKG_DEV}
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
 echo
@@ -13,7 +13,6 @@ echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Executing bootstrap"
 #config
 TARGET_OUTPUT="/output"
 TARGET_TIMEZONE="Asia/Seoul"
-TARGET_LOCALE="ko_KR.UTF-8"
 
 ALPINE_EDITION="${BUILD_EDITION:-edge}"
 if [ "${ALPINE_EDITION}" = "latest" ]; then
@@ -26,13 +25,12 @@ echo "Current version : ${ALPINE_EDITION}"
 
 #basic
 mkdir -p ${TARGET_OUTPUT}/usr/bin ${TARGET_OUTPUT}/usr/sbin ${TARGET_OUTPUT}/usr/lib
-ln -s usr/bin ${TARGET_OUTPUT}/bin
-ln -s usr/sbin ${TARGET_OUTPUT}/sbin
-ln -s usr/lib ${TARGET_OUTPUT}/lib
+ln -sf usr/bin ${TARGET_OUTPUT}/bin
+ln -sf usr/sbin ${TARGET_OUTPUT}/sbin
+ln -sf usr/lib ${TARGET_OUTPUT}/lib
 
 #init
-apk --repository ${ALPINE_MIRROR}/latest-stable/main --no-cache --no-script --allow-untrusted --root "${TARGET_OUTPUT}" --initdb add busybox alpine-baselayout alpine-keys apk-tools libc-utils alpine-release
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin LANG=C LC_ALL=C chroot "${TARGET_OUTPUT}" /usr/bin/busybox --install -s
+apk --repository ${ALPINE_MIRROR}/latest-stable/main --no-cache --allow-untrusted --root "${TARGET_OUTPUT}" --initdb add busybox alpine-baselayout alpine-keys apk-tools libc-utils alpine-release
 
 #mirror
 if [ "${ALPINE_EDITION}" = "edge" ]; then
@@ -55,27 +53,14 @@ nameserver 1.0.0.1
 EOF
 
 #timezone
-echo "${TARGET_TIMEZONE}" > ${TARGET_OUTPUT}/etc/TZ
 if [ -e ${TARGET_OUTPUT}/usr/share/zoneinfo/${TARGET_TIMEZONE} ]; then
+	echo "${TARGET_TIMEZONE}" > ${TARGET_OUTPUT}/etc/timezone
 	rm -rf ${TARGET_OUTPUT}/etc/localtime
-	ln -s /usr/share/zoneinfo/${TARGET_TIMEZONE} ${TARGET_OUTPUT}/etc/localtime
+	ln -sf /usr/share/zoneinfo/${TARGET_TIMEZONE} ${TARGET_OUTPUT}/etc/localtime
 elif [ -e /usr/share/zoneinfo/${TARGET_TIMEZONE} ]; then
+	echo "${TARGET_TIMEZONE}" > ${TARGET_OUTPUT}/etc/timezone
 	rm -rf ${TARGET_OUTPUT}/etc/localtime
-	cat /usr/share/zoneinfo/${TARGET_TIMEZONE} > ${TARGET_OUTPUT}/etc/localtime
-elif [ -e /etc/zoneinfo/${TARGET_TIMEZONE} ]; then
-	rm -rf ${TARGET_OUTPUT}/etc/localtime
-	cat /etc/zoneinfo/${TARGET_TIMEZONE} > ${TARGET_OUTPUT}/etc/localtime
-else
-	tz1=$(echo "${TARGET_TIMEZONE}" | cut -d '/' -f 1)
-	tz2=$(echo "${TARGET_TIMEZONE}" | cut -d '/' -f 2)
-	mkdir -p ${TARGET_OUTPUT}/tmp/tzdata
-	apk --repository ${ALPINE_MIRROR}/${ALPINE_EDITION}/main --no-cache --allow-untrusted --root "${TARGET_OUTPUT}" --stdout --quiet fetch tzdata | tar -zx -C "${TARGET_OUTPUT}/tmp/tzdata" usr/share/zoneinfo
-	if [ -e ${TARGET_OUTPUT}/tmp/tzdata/usr/share/zoneinfo/${tz1}/${tz2} ]; then
-		mkdir -p ${TARGET_OUTPUT}/etc/zoneinfo/${tz1}
-		cp ${TARGET_OUTPUT}/tmp/tzdata/usr/share/zoneinfo/${tz1}/${tz2} ${TARGET_OUTPUT}/etc/zoneinfo/${tz1}/${tz2}
-		ln -sf /etc/zoneinfo/${tz1}/${tz2} ${TARGET_OUTPUT}/etc/localtime
-	fi
-	rm -rf ${TARGET_OUTPUT}/tmp/tzdata
+	cp /usr/share/zoneinfo/${TARGET_TIMEZONE} ${TARGET_OUTPUT}/etc/localtime
 fi
 
 #script
