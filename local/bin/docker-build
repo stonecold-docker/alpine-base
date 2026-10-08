@@ -80,6 +80,12 @@ else
 	rm -rf ${TARGET_OUTPUT}/tmp/tzdata
 fi
 
+#script
+cp /usr/local/bin/docker-install.alpine ${TARGET_OUTPUT}/usr/local/bin/docker-install
+cp /usr/local/bin/docker-adduser ${TARGET_OUTPUT}/usr/local/bin/
+cp /usr/local/bin/docker-chown ${TARGET_OUTPUT}/usr/local/bin/
+cp /usr/local/bin/docker-run ${TARGET_OUTPUT}/usr/local/bin/
+
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
 echo
 
