@@ -1,0 +1,330 @@
+#!/bin/sh
+
+fn_usage() {
+	echo "Usage : $(basename "${0}") [package]"
+	exit 1
+}
+
+fn_refresh() {
+	fn_check_busybox
+
+	apk update $@
+}
+
+fn_update() {
+	fn_check_busybox
+
+	apk upgrade $@
+	apk fix
+
+	if [ -e /etc/TZ.apk-new ]; then
+		mv /etc/TZ.apk-new /etc/TZ
+	fi
+
+	if [ ! -e /usr/bin/ssl_client ]; then
+		apk add ssl_client
+	fi
+}
+
+fn_install() {
+	fn_check_busybox
+
+	apk add $@
+	apk fix
+}
+
+fn_delete() {
+	apk del $@ --purge
+	apk fix
+
+	fn_check_busybox
+}
+
+fn_install_custom() {
+	if [ "${PACKAGE_FOREGO}" = "Y" -a ! -e /usr/local/bin/forego ] || [ "${PACKAGE_GOREMAN}" = "Y" -a ! -e /usr/local/bin/goreman ] || [ "${PACKAGE_SHOREMAN}" = "Y" -a ! -e /usr/local/bin/shoreman ] || [ "${PACKAGE_GOSU}" = "Y" -a ! -e /usr/local/bin/gosu ] || [ "${PACKAGE_SUEXEC}" = "Y" -a ! -e /usr/local/bin/su-exec ]; then
+		local install_wget=N
+		if ! wget --help &> /dev/null ; then
+			fn_install wget
+			install_wget=Y
+		#elif [ ! -z "$(wget --help 2>&1| grep BusyBox)" ]; then
+		#	fn_install wget
+		#	install_wget=Y
+		fi
+		if [ "${PACKAGE_FOREGO}" = "Y" -a ! -e /usr/local/bin/forego ]; then
+			echo "Installing forego"
+			local URL=""
+			if [ -e /lib/ld-musl-x86_64.so.1 ]; then
+				URL=https://bin.equinox.io/c/ekMN3bCZFUn/forego-stable-linux-amd64.tgz
+			elif [ -e /lib/ld-musl-aarch64.so.1 ]; then
+				URL=https://bin.equinox.io/c/ekMN3bCZFUn/forego-stable-linux-arm64.tgz
+			elif [ -e /lib/ld-musl-armhf.so.1 ]; then
+				URL=https://bin.equinox.io/c/ekMN3bCZFUn/forego-stable-linux-arm.tgz
+			elif [ -e /lib64/ld-linux-x86-64.so.2 ]; then
+				URL=https://bin.equinox.io/c/ekMN3bCZFUn/forego-stable-linux-amd64.tgz
+			elif [ -e /lib/ld-linux-aarch64.so.1 ]; then
+				URL=https://bin.equinox.io/c/ekMN3bCZFUn/forego-stable-linux-arm64.tgz
+			elif [ -e /lib/ld-linux-armhf.so.3 ]; then
+				URL=https://bin.equinox.io/c/ekMN3bCZFUn/forego-stable-linux-arm.tgz
+			fi
+			wget --no-check-certificate "${URL}" -q -O - | tar zxf - -C /usr/local/bin/
+			chmod 755 /usr/local/bin/forego
+			echo "OK"
+		fi
+		if [ "${PACKAGE_GOREMAN}" = "Y" -a ! -e /usr/local/bin/goreman ]; then
+			echo "Installing goreman"
+			local URL=""
+			if [ -e /lib/ld-musl-x86_64.so.1 ]; then
+				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/goreman-musl-x64
+			elif [ -e /lib/ld-musl-aarch64.so.1 ]; then
+				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/goreman-musl-aarch64
+			elif [ -e /lib/ld-musl-armhf.so.1 ]; then
+				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/goreman-musl-armv7h
+			elif [ -e /lib64/ld-linux-x86-64.so.2 ]; then
+				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/goreman-glibc-x64
+			elif [ -e /lib/ld-linux-aarch64.so.1 ]; then
+				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/goreman-glibc-aarch64
+			elif [ -e /lib/ld-linux-armhf.so.3 ]; then
+				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/goreman-glibc-armv7h
+			fi
+			wget --no-check-certificate "${URL}" -q -O /usr/local/bin/goreman
+			chmod 755 /usr/local/bin/goreman
+			echo "OK"
+		fi
+		if [ "${PACKAGE_SHOREMAN}" = "Y" -a ! -e /usr/local/bin/shoreman ]; then
+			echo "Installing shoreman"
+			local URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/shoreman
+			wget --no-check-certificate "${URL}" -q -O /usr/local/bin/shoreman
+			chmod 755 /usr/local/bin/shoreman
+			echo "OK"
+		fi
+		if [ "${PACKAGE_GOSU}" = "Y" -a ! -e /usr/local/bin/gosu ]; then
+			echo "Installing gosu"
+			local URL=""
+			if [ -e /lib/ld-musl-x86_64.so.1 -o -e /lib64/ld-linux-x86-64.so.2 ]; then
+				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/gosu-amd64
+			elif [ -e /lib/ld-musl-aarch64.so.1 -o -e /lib/ld-linux-aarch64.so.1 ]; then
+				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/gosu-arm64
+			elif [ -e /lib/ld-musl-armhf.so.1 -o -e /lib/ld-linux-armhf.so.3 ]; then
+				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/gosu-armhf
+			fi
+			wget --no-check-certificate "${URL}" -q -O /usr/local/bin/gosu
+			chmod 755 /usr/local/bin/gosu
+			echo "OK"
+		fi
+		if [ "${PACKAGE_SUEXEC}" = "Y" -a ! -e /usr/local/bin/su-exec ]; then
+			echo "Installing su-exec"
+			local URL=""
+			if [ -e /lib/ld-musl-x86_64.so.1 ]; then
+				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/su-exec-musl-x64
+			elif [ -e /lib/ld-musl-aarch64.so.1 ]; then
+				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/su-exec-musl-aarch64
+			elif [ -e /lib/ld-musl-armhf.so.1 ]; then
+				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/su-exec-musl-armv7h
+			elif [ -e /lib64/ld-linux-x86-64.so.2 ]; then
+				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/su-exec-glibc-x64
+			elif [ -e /lib/ld-linux-aarch64.so.1 ]; then
+				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/su-exec-glibc-aarch64
+			elif [ -e /lib/ld-linux-armhf.so.3 ]; then
+				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/su-exec-glibc-armv7h
+			fi
+			wget --no-check-certificate "${URL}" -q -O /usr/local/bin/su-exec
+			chmod 755 /usr/local/bin/su-exec
+			echo "OK"
+		fi
+		if [ "${install_wget}" = "Y" ]; then
+			fn_delete wget
+		fi
+	fi
+}
+
+fn_delete_custom() {
+	if [ "${PACKAGE_FOREGO}" = "Y" ]; then
+		rm -rf /usr/local/bin/forego
+	fi
+	if [ "${PACKAGE_GOREMAN}" = "Y" ]; then
+		rm -rf /usr/local/bin/goreman
+	fi
+	if [ "${PACKAGE_SHOREMAN}" = "Y" ]; then
+		rm -rf /usr/local/bin/shoreman
+	fi
+	if [ "${PACKAGE_GOSU}" = "Y" ]; then
+		rm -rf /usr/local/bin/gosu
+	fi
+	if [ "${PACKAGE_SUEXEC}" = "Y" ]; then
+		rm -rf /usr/local/bin/su-exec
+	fi
+}
+
+fn_clean() {
+	fn_check_busybox
+
+	#Linux
+	rm -rf /core /*.core
+	[ -d /tmp ] && find /tmp -mindepth 1 -maxdepth 1 -exec rm -rf "{}" \;
+	[ -d /var/tmp ] && find /var/tmp -mindepth 1 -maxdepth 1 -exec rm -rf "{}" \;
+	[ -d /var/log ] && find /var/log -mindepth 1 -type f -exec rm -rf "{}" \;
+
+	#root
+	if ! mountpoint /root &> /dev/null ; then
+		find /root -mindepth 1 -maxdepth 1 -exec rm -rf "{}" \;
+	fi
+	if [ -e /etc/skel ]; then
+		find /etc/skel -mindepth 1 -exec cp -ar "{}" /root/ \;
+	fi
+
+	#Distro
+	[ -d /var/cache/apk ] && rm -rf /var/cache/apk/*
+
+	return
+
+	#Slimization
+	[ -d /usr/share/doc ] && rm -rf /usr/share/doc/*
+	[ -d /usr/share/doc-base ] && rm -rf /usr/share/doc-base/*
+	[ -d /usr/share/gtk-doc ] && rm -rf /usr/share/gtk-doc/*
+	[ -d /usr/share/man ] && rm -rf /usr/share/man/*
+	[ -d /usr/share/info ] && rm -rf /usr/share/info/*
+	if [ -e /usr/share/zoneinfo ]; then
+		local regex=""
+		for x in UTC\* UCT\* GMT\* Universal localtime zone.tab Seoul ROK
+		do
+			regex="${regex} -a ! -name ${x} "
+		done
+
+		find /usr/share/zoneinfo -mindepth 1 \( -type l -o -type f \) ${regex} -exec rm -rf '{}' 2>/dev/null \;
+
+		if [ -e /usr/share/zoneinfo/Asia/Seoul ]; then
+			local regex=""
+			for x in Asia
+			do
+				regex="${regex} -a ! -name ${x} "
+			done
+			find /usr/share/zoneinfo -mindepth 1 -maxdepth 1 -type d ${regex} -exec rm -rf '{}' 2>/dev/null \;
+		else
+			find /usr/share/zoneinfo -mindepth 1 -maxdepth 1 -type d -exec rm -rf '{}' 2>/dev/null \;
+		fi
+	fi
+	if [ -e /usr/share/locale ]; then
+		local regex=""
+		for x in locale.alias ko
+		do
+			regex="${regex} -a ! -name ${x} "
+		done
+
+		find /usr/share/locale -mindepth 1 -maxdepth 1 ${regex} -exec rm -rf '{}' 2>/dev/null \;
+	fi
+	if [ -e /usr/share/i18n/locales ]; then
+		local regex=""
+		for x in i18n i18n_ctype iso14651_t1 iso14651_t1_common translit_circle translit_cjk_compat translit_combining translit_compat translit_font translit_fraction translit_narrow translit_neutral translit_small translit_wide translit_hangul ko_KR
+		do
+			regex="${regex} -a ! -name ${x} "
+		done
+
+		find /usr/share/i18n/locales -mindepth 1 -maxdepth 1 ${regex} -exec rm -rf '{}' 2>/dev/null \;
+	fi
+	if [ -e /usr/share/i18n/charmaps ]; then
+		local regex=""
+		for x in ANSI_X3.4-1968.gz ANSI_X3.110-1983.gz UTF-8.gz EUC-KR.gz KSC5636.gz CP949.gz
+		do
+			regex="${regex} -a ! -name ${x} "
+		done
+
+		find /usr/share/i18n/charmaps -mindepth 1 -maxdepth 1 ${regex} -exec rm -rf '{}' 2>/dev/null \;
+	fi
+	for term in  /usr/share/termino /usr/lib/terminfo
+	do
+		if [ ! -e ${term} ]; then
+			continue
+		fi
+		local regex=""
+		local regex2=""
+		for x in ansi dumb linux rxvt screen screen-256color vt100 vt102 xterm xterm-256color xterm-color xterm-utf8 cons25-debian xterm-debian
+		do
+			regex="${regex} -a ! -name ${x} "
+			regex2="${regex2} -a ! -name ${x:0:1} "
+		done
+
+		find ${term} -mindepth 1 \( -type l -o -type f \) ${regex} -exec rm -rf '{}' 2>/dev/null \;
+		find ${term} -mindepth 1 -maxdepth 1 ${regex2} -exec rm -rf '{}' 2>/dev/null \;
+	done
+}
+
+fn_check_busybox() {
+	if [ -x /bin/busybox ]; then
+		/bin/busybox --install -s
+	elif [ -x /bin/busybox.static ]; then
+		/bin/busybox.static --install -s
+	fi
+}
+
+
+#Main
+if [ -z "${1}" ]; then
+	fn_usage
+fi
+
+if [ "$(id -u)" != "0" ]; then
+	echo "root privileges are required"
+	exit 1
+fi
+
+PARAM_REFRESH=N
+PARAM_UPDATE=N
+PARAM_DEL=N
+PARAM_CLEAN=N
+PARAM_EXTRA=
+PACKAGES=
+PACKAGE_FOREGO=N
+PACKAGE_GOREMAN=N
+PACKAGE_SHOREMAN=N
+PACKAGE_GOSU=N
+PACKAGE_SUEXEC=N
+
+while [ ${#} -gt 0 ]
+do
+	case "${1}" in
+		-h|--help) fn_usage ;;
+		-r|--refresh) PARAM_REFRESH=Y ;;
+		-u|--update) PARAM_UPDATE=Y ;;
+		-d|--del) PARAM_DEL=Y ;;
+		-c|--cean) PARAM_CLEAN=Y ;;
+		-o) PARAM_EXTRA="${PARAM_EXTRA} ${1} ${2}" ; shift ;;
+		forego) PACKAGE_FOREGO=Y ;;
+		goreman) PACKAGE_GOREMAN=Y ;;
+		shoreman) PACKAGE_SHOREMAN=Y ;;
+		gosu) PACKAGE_GOSU=Y ;;
+		su-exec) PACKAGE_SUEXEC=Y ;;
+		*) PACKAGES="${PACKAGES} ${1}" ;;
+	esac
+	shift
+done
+
+if [ "${PARAM_REFRESH}" = "Y" ]; then
+	fn_refresh ${PARAM_EXTRA}
+elif [ "${PARAM_UPDATE}" = "Y" ]; then
+	fn_refresh ${PARAM_EXTRA}
+elif [ ! -z "${PACKAGES}" -a -z "$(ls /var/cache/apk/* 2> /dev/null)" ]; then
+	fn_refresh ${PARAM_EXTRA}
+fi
+
+if [ "${PARAM_UPDATE}" = "Y" ]; then
+	fn_update ${PARAM_EXTRA}
+fi
+
+if [ ! -z "${PACKAGES}" ]; then
+	if [ "${PARAM_DEL}" = "N" ]; then
+		fn_install ${PARAM_EXTRA} ${PACKAGES}
+	else
+		fn_delete ${PARAM_EXTRA} ${PACKAGES}
+	fi
+fi
+if [ "${PARAM_DEL}" = "N" ]; then
+	fn_install_custom
+else
+	fn_delete_custom
+fi
+
+if [ "${PARAM_CLEAN}" = "Y" ]; then
+	fn_clean
+fi
+
+exit 0

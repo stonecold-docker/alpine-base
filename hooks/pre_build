@@ -1,4 +1,3 @@
 #!/bin/bash
 
-docker run --privileged -t --rm forumi0721/multiarch-qemu:latest register
-
+echo "Running hooks in app/hooks/pre_build"

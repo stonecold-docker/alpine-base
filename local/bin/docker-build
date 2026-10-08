@@ -4,38 +4,82 @@ set -e
 
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Installing packages"
 PKG_LIB=""
-PKG_DEV="sudo bash git grep util-linux losetup e2fsprogs"
+PKG_DEV="sudo bash git grep util-linux losetup e2fsprogs tzdata"
 docker-install -r -u ${PKG_LIB} ${PKG_DEV}
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
 echo
 
-echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Downloading bootstrap"
-mkdir -p /build
-cd /build
-wget --no-check-certificate -q https://bitbucket.org/forumi0721/docker-dist-files/raw/master/imagex.sh
-chmod +x imagex.sh
-git clone https://forumi0721@bitbucket.org/forumi0721/docker-dist-extras.git extras --depth=1
-if [ "$(uname -m)" = "x86_64" -a "${BUILD_TAG}" = "aarch64" ]; then
-	cp extras/qemu-aarch64-static /usr/bin
-	chmod +x /usr/bin/qemu-aarch64-static
-elif [ "$(uname -m)" = "x86_64" -a "${BUILD_TAG}" = "armv7" ]; then
-	cp extras/qemu-arm-static /usr/bin
-	chmod +x /usr/bin/qemu-arm-static
-fi
-cd /
-echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
-echo
-
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Executing bootstrap"
-cd /build
-./imagex.sh -d alpine -a ${BUILD_TAG:-x64} -q
-cd /
+#config
+TARGET_OUTPUT="/output"
+TARGET_TIMEZONE="Asia/Seoul"
+TARGET_LOCALE="ko_KR.UTF-8"
+
+ALPINE_EDITION="${ALPINE_EDITION:-edge}"
+echo "Current version : ${ALPINE_EDITION}"
+
+ALPINE_ARCH=$(uname -m)
+
+ALPINE_MIRROR=http://mirror.xtom.com.hk/alpine
+
+chroot_cmd() {
+	PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin LANG=C LC_ALL=C chroot "${TARGET_OUTPUT}" "${@}"
+}
+
+#skel
+mkdir -p ${TARGET_OUTPUT}/usr/bin ${TARGET_OUTPUT}/usr/sbin ${TARGET_OUTPUT}/usr/lib
+ln -s usr/bin ${TARGET_OUTPUT}/bin
+ln -s usr/sbin ${TARGET_OUTPUT}/sbin
+ln -s usr/lib ${TARGET_OUTPUT}/lib
+
+#init
+apk --repository ${ALPINE_MIRROR}/latest-stable/main --no-cache --no-script --allow-untrusted --root "${TARGET_OUTPUT}" --initdb add busybox alpine-baselayout alpine-keys apk-tools libc-utils alpine-release
+chroot_cmd /usr/bin/busybox --install -s
+
+#mirror
+if [ "${ALPINE_EDITION}" = "edge" ]; then
+	echo "${ALPINE_MIRROR}/edge/main" >> ${TARGET_OUTPUT}/etc/apk/repositories
+	echo "${ALPINE_MIRROR}/edge/community" >> ${TARGET_OUTPUT}/etc/apk/repositories
+	echo "${ALPINE_MIRROR}/edge/testing" >> ${TARGET_OUTPUT}/etc/apk/repositories
+	echo "${ALPINE_MIRROR}/latest-stable/main" > ${TARGET_OUTPUT}/etc/apk/repositories
+	echo "${ALPINE_MIRROR}/latest-stable/community" >> ${TARGET_OUTPUT}/etc/apk/repositories
+else
+	echo "${ALPINE_MIRROR}/${ALPINE_EDITION}/main" > ${TARGET_OUTPUT}/etc/apk/repositories
+	echo "${ALPINE_MIRROR}/${ALPINE_EDITION}/community" >> ${TARGET_OUTPUT}/etc/apk/repositories
+	echo "@${ALPINE_EDITION}main ${ALPINE_MIRROR}/${ALPINE_EDITION}/main" >> ${TARGET_OUTPUT}/etc/apk/repositories
+	echo "@${ALPINE_EDITION}community  ${ALPINE_MIRROR}/${ALPINE_EDITION}/community" >> ${TARGET_OUTPUT}/etc/apk/repositories
+fi
+
+#resolve
+cat <<- EOF > ${TARGET_OUTPUT}/etc/resolv.conf
+nameserver 1.1.1.1
+nameserver 1.0.0.1
+EOF
+
+#timezone
+echo "${TARGET_TIMEZONE}" > ${TARGET_OUTPUT}/etc/TZ
+if [ -e ${TARGET_OUTPUT}/usr/share/zoneinfo/${TARGET_TIMEZONE} ]; then
+	rm -rf ${TARGET_OUTPUT}/etc/localtime
+	ln -s /usr/share/zoneinfo/${TARGET_TIMEZONE} ${TARGET_OUTPUT}/etc/localtime
+elif [ -e /usr/share/zoneinfo/${TARGET_TIMEZONE} ]; then
+	rm -rf ${TARGET_OUTPUT}/etc/localtime
+	cat /usr/share/zoneinfo/${TARGET_TIMEZONE} > ${TARGET_OUTPUT}/etc/localtime
+elif [ -e /etc/zoneinfo/${TARGET_TIMEZONE} ]; then
+	rm -rf ${TARGET_OUTPUT}/etc/localtime
+	cat /etc/zoneinfo/${TARGET_TIMEZONE} > ${TARGET_OUTPUT}/etc/localtime
+else
+	tz1=$(echo "${TARGET_TIMEZONE}" | cut -d '/' -f 1)
+	tz2=$(echo "${TARGET_TIMEZONE}" | cut -d '/' -f 2)
+	mkdir -p ${TARGET_OUTPUT}/tmp/tzdata
+	apk --repository ${ALPINE_MIRROR}/${ALPINE_EDITION}/main --no-cache --allow-untrusted --root "${TARGET_OUTPUT}" --stdout --quiet fetch tzdata | tar -zx -C "${TARGET_OUTPUT}/tmp/tzdata" usr/share/zoneinfo
+	if [ -e ${TARGET_OUTPUT}/tmp/tzdata/usr/share/zoneinfo/${tz1}/${tz2} ]; then
+		mkdir -p ${TARGET_OUTPUT}/etc/zoneinfo/${tz1}
+		cp ${TARGET_OUTPUT}/tmp/tzdata/usr/share/zoneinfo/${tz1}/${tz2} ${TARGET_OUTPUT}/etc/zoneinfo/${tz1}/${tz2}
+		ln -sf /etc/zoneinfo/${tz1}/${tz2} ${TARGET_OUTPUT}/etc/localtime
+	fi
+	rm -rf ${TARGET_OUTPUT}/tmp/tzdata
+fi
+
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
 echo
-
-echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Moving output"
-cd /
-mv /build/dist/dist-* /output
-rm -rf /build
-echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
 
