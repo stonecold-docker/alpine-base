@@ -10,7 +10,7 @@ echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
 echo
 
 echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Executing bootstrap"
-#variables
+#config
 TARGET_OUTPUT="/output"
 TARGET_TIMEZONE="Asia/Seoul"
 TARGET_LOCALE="ko_KR.UTF-8"
@@ -24,7 +24,7 @@ ALPINE_MIRROR=http://mirror.xtom.com.hk/alpine
 
 echo "Current version : ${ALPINE_EDITION}"
 
-#basic  
+#basic
 mkdir -p ${TARGET_OUTPUT}/usr/bin ${TARGET_OUTPUT}/usr/sbin ${TARGET_OUTPUT}/usr/lib
 ln -s usr/bin ${TARGET_OUTPUT}/bin
 ln -s usr/sbin ${TARGET_OUTPUT}/sbin
