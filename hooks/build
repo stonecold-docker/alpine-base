@@ -17,10 +17,46 @@ if [ "${BUILD_NO_CACHE:-false}" = "true" ]; then
 	args+=(--no-cache)
 fi
 
+# === Debug ===
+echo "=== Build environment ==="
+echo "DOCKER_TAG=$DOCKER_TAG"
+echo "PLATFORM=$platform"
+echo "IMAGE_NAME=$IMAGE_NAME"
+echo "HOST_ARCH=$(uname -m)"
+echo "NO_CACHE=${BUILD_NO_CACHE:-false}"
+
+echo "=== Docker architecture ==="
+docker info --format 'Architecture={{.Architecture}}'
+
+if [ "$DOCKER_TAG" = "arm64" ]; then
+	echo "=== ARM64 binfmt ==="
+	cat /proc/sys/fs/binfmt_misc/qemu-aarch64 2>/dev/null || true
+
+	echo "=== ARM64 execution test ==="
+	docker run --rm --platform linux/arm64 alpine:latest \
+		sh -c 'echo "uname=$(uname -m)"; echo "apk=$(apk --print-arch)"'
+
+	echo "=== ARM64 base image test ==="
+	docker run --rm --platform linux/arm64 \
+		forumi0721/alpine-base:latest \
+		sh -c 'echo "uname=$(uname -m)"; echo "apk=$(apk --print-arch)"' || true
+fi
+
+echo "=== Building ==="
+
 docker build \
+	--progress=plain \
 	--platform "$platform" \
 	"${args[@]}" \
 	--pull \
 	-f "$DOCKERFILE_PATH" \
 	-t "$IMAGE_NAME" \
 	.
+
+echo "=== Built image metadata ==="
+docker image inspect "$IMAGE_NAME" \
+	--format 'Architecture={{.Architecture}} OS={{.Os}}'
+
+echo "=== Built image runtime ==="
+docker run --rm --platform "$platform" "$IMAGE_NAME" \
+	sh -c 'echo "uname=$(uname -m)"; echo "apk=$(apk --print-arch)"' || true
