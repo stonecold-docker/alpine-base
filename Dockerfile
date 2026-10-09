@@ -1,4 +1,4 @@
-FROM forumi0721/alpine-base:latest as builder
+FROM forumi0721/alpine-base:latest AS builder
 
 LABEL maintainer="forumi0721@gmail.com"
 
