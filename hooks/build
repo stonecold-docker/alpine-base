@@ -11,8 +11,16 @@ case "$DOCKER_TAG" in
 		;;
 esac
 
+args=()
+
+if [ "${BUILD_NO_CACHE:-false}" = "true" ]; then
+	args+=(--no-cache)
+fi
+
 docker build \
 	--platform "$platform" \
+	"${args[@]}" \
+	--pull \
 	-f "$DOCKERFILE_PATH" \
 	-t "$IMAGE_NAME" \
 	.

@@ -9,4 +9,3 @@ if [ -e multiarch-manifest.yaml ]; then
 
 	./manifest-tool-linux-amd64 push from-spec multiarch-manifest.yaml
 fi
-

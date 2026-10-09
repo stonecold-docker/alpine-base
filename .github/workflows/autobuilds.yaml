@@ -145,6 +145,20 @@ jobs:
           path=hooks/gh_pre_push
           if [ -f "$path" ]; then chmod +x "$path"; "./$path"; fi
 
+      # Display all available GitHub Actions variables for troubleshooting.
+      # Secrets are excluded; environment variables are shown separately.
+      - name: Check build configuration
+        env:
+          BUILD_VARS: ${{ toJSON(vars) }}
+        run: |
+          echo "=== GitHub Actions Variables ==="
+          echo "$BUILD_VARS" | jq .
+
+          echo "=== Workflow Environment Variables ==="
+          echo "DOCKER_AUTOBUILDS_CONTEXT_PATH=$DOCKER_AUTOBUILDS_CONTEXT_PATH"
+          echo "DOCKER_AUTOBUILDS_DOCKERFILE_PATH=$DOCKER_AUTOBUILDS_DOCKERFILE_PATH"
+          echo "DOCKER_REPOSITORY_NAME=$DOCKER_REPOSITORY_NAME"
+
       # Build each architecture by digest without creating temporary tags.
       # PRs build without pushing images.
       - name: Build and push architecture image
@@ -157,8 +171,10 @@ jobs:
           outputs: type=image,name=${{ env.DOCKER_REPOSITORY_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }},oci-mediatypes=false
           provenance: false
           sbom: false
-          cache-from: type=gha,scope=${{ matrix.tag }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.tag }}
+          cache-from: ${{ vars.BUILD_NO_CACHE == 'true' && '' || format('type=gha,scope={0}', matrix.tag) }}
+          cache-to: ${{ vars.BUILD_NO_CACHE == 'true' && '' || format('type=gha,mode=max,scope={0}', matrix.tag) }}
+          no-cache: ${{ vars.BUILD_NO_CACHE == 'true' }}
+          pull: true
 
       # Save the digest for the manifest job.
       - name: Export digest

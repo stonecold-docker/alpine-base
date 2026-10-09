@@ -1,4 +1,8 @@
 #!/bin/bash
 
-docker run --privileged -t --rm forumi0721/multiarch-qemu:latest register
+set -euo pipefail
 
+if [ "$DOCKER_TAG" = "arm64" ]; then
+	docker run --rm --privileged multiarch/qemu-user-static:register
+	cat /proc/sys/fs/binfmt_misc/qemu-aarch64 || true
+fi
