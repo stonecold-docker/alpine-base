@@ -3,6 +3,7 @@
 set -euo pipefail
 
 if [ "$DOCKER_TAG" = "arm64" ]; then
-	docker run --rm --privileged multiarch/qemu-user-static:register
-	cat /proc/sys/fs/binfmt_misc/qemu-aarch64 || true
+	docker run --privileged --rm tonistiigi/binfmt --install arm64
+
+	docker run --rm --platform linux/arm64 alpine:latest sh -c 'uname -m; echo "ARM64 execution OK"'
 fi
