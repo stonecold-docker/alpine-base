@@ -5,12 +5,10 @@
 
 
 ----------------------------------------
-### x86_64
-![Docker Image Size](https://img.shields.io/docker/image-size/forumi0721/alpine-base/x64)
-### aarch64
-![Docker Image Size](https://img.shields.io/docker/image-size/forumi0721/alpine-base/aarch64)
-### armv7
-![Docker Image Size](https://img.shields.io/docker/image-size/forumi0721/alpine-base/aarch64)
+### amd64
+![Docker Image Size (tag)](https://img.shields.io/docker/image-size/forumi0721/alpine-base/latest?arch=amd64)
+### arm64
+![Docker Image Size (tag)](https://img.shields.io/docker/image-size/forumi0721/alpine-base/latest?arch=arm64)
 
 
 
@@ -18,8 +16,8 @@
 #### Description
 
 * Distribution : [Alpine Linux](https://alpinelinux.org/)
-* Architecture : x64,aarch64,armv7
-* Appplication : -
+* Architecture : amd64, arm64
+* Application : -
 
 
 
@@ -28,7 +26,7 @@
 
 ```sh
 docker run -i -t --rm \
-           forumi0721/alpine-base:[ARCH_TAG]
+           forumi0721/alpine-base:latest
 ```
 
 
@@ -37,7 +35,7 @@ docker run -i -t --rm \
 #### Usage
 
 ```dockerfile
-FROM forumi0721/alpine-base:[ARCH_TAG]
+FROM forumi0721/alpine-base:latest
 
 RUN 'build-code'
 ```

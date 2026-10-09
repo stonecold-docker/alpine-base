@@ -1,6 +1,10 @@
 Dockerfile
 Dockerfile.*
 README.md
+docker-*
+multiarch-manifest.yaml
+hooks
 .dockerignore
 .git
 .gitignore
+.github

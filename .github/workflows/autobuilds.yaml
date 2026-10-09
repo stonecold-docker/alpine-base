@@ -1,165 +1,337 @@
 name: Docker Autobuilds
 
 on:
-  # This will run the workflow on pull requests. Remove if Autotest is disabled
+  # Build pull requests without pushing images.
   pull_request:
 
-  # This will run the workflow on pushes to main and version tags. Adjust as needed
+  # Publish main as latest, and version tags as semantic-version tags.
   push:
     branches:
       - main
     tags:
       - "v*.*.*"
 
-  # This will run the workflow when triggered by an upstream repository.
+  # Rebuild when an upstream base-image repository is updated.
   repository_dispatch:
     types:
       - base-updated
 
+  # Allow manual builds from GitHub Actions.
+  workflow_dispatch:
+
+  # Rebuild every Thursday at 2 AM KST.
+  schedule:
+    - cron: "0 2 * * 4"
+      timezone: "Asia/Seoul"
+
+# Serialize publishing workflows within this repository. Do not cancel an
+# in-progress publication; otherwise architecture tags may be left inconsistent.
+concurrency:
+  group: docker-autobuilds-${{ github.repository }}
+  cancel-in-progress: false
+
 env:
-  # Define the context path and Dockerfile path.
-
-  # DOCKER_AUTOBUILDS_CONTEXT_PATH should be set to the "Build Context" in the Build Rules of your Docker Hub Automated Builds configuration.
+  # Build context and Dockerfile path, relative to the repository root.
   DOCKER_AUTOBUILDS_CONTEXT_PATH: .
-
-  # DOCKER_AUTOBUILDS_DOCKERFILE_PATH should be set to the "Dockerfile Location" in the Build Rules of your Docker Hub Automated Builds configuration.
   DOCKER_AUTOBUILDS_DOCKERFILE_PATH: Dockerfile
 
-  # DOCKER_REPOSITORY_NAME should be set to the name of the Docker Hub repository where the image will be pushed to.
+  # Target Docker Hub repository; repository names must match on both services.
   DOCKER_REPOSITORY_NAME: forumi0721/${{ github.event.repository.name }}
 
 jobs:
-  autobuilds:
+  # Resolve the optional platform list into a dynamic build matrix.
+  # Default: amd64 and arm64. Repository variable BUILD_PLATFORMS may select
+  # either or both; only these two architectures are supported here.
+  prepare:
     runs-on: ubuntu-latest
-
+    outputs:
+      matrix: ${{ steps.platforms.outputs.matrix }}
+      tags: ${{ steps.platforms.outputs.tags }}
     steps:
+      - name: Resolve build platforms
+        id: platforms
+        env:
+          BUILD_PLATFORMS: ${{ vars.BUILD_PLATFORMS || 'linux/amd64,linux/arm64' }}
+        run: |
+          set -euo pipefail
+          matrix='[]'
+          tags='[]'
+          IFS=',' read -ra platforms <<< "$BUILD_PLATFORMS"
+
+          for platform in "${platforms[@]}"; do
+            platform="${platform//[[:space:]]/}"
+            case "$platform" in
+              linux/amd64) tag=amd64; runner=ubuntu-24.04 ;;
+              linux/arm64) tag=arm64; runner=ubuntu-24.04-arm ;;
+              *) echo "Unsupported platform: $platform" >&2; exit 1 ;;
+            esac
+            matrix=$(jq -c --arg platform "$platform" --arg tag "$tag" \
+              --arg runner "$runner" \
+              '. + [{platform:$platform,tag:$tag,runner:$runner}]' <<< "$matrix")
+            tags=$(jq -c --arg tag "$tag" '. + [$tag]' <<< "$tags")
+          done
+
+          if [ "$(jq 'length' <<< "$tags")" -eq 0 ] || \
+             [ "$(jq 'length' <<< "$tags")" -ne "$(jq 'unique | length' <<< "$tags")" ]; then
+            echo 'No platforms, or duplicate platforms configured' >&2
+            exit 1
+          fi
+          echo "matrix={\"include\":$matrix}" >> "$GITHUB_OUTPUT"
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+
+  # Build architectures in parallel, on native GitHub-hosted runners.
+  build:
+    needs: prepare
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      # Checkout the source repository and resolve Dockerfile-relative hooks.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Set up paths
         id: paths
+        env:
+          CONTEXT: ${{ env.DOCKER_AUTOBUILDS_CONTEXT_PATH }}
+          DOCKERFILE: ${{ env.DOCKER_AUTOBUILDS_DOCKERFILE_PATH }}
         run: |
-          echo "build_path=./${{ env.DOCKER_AUTOBUILDS_CONTEXT_PATH }}" >> $GITHUB_OUTPUT
-          echo "dockerfile_path=${{ env.DOCKER_AUTOBUILDS_DOCKERFILE_PATH }}" >> $GITHUB_OUTPUT
-          echo "dockerfile_folder=$(dirname ./${{ env.DOCKER_AUTOBUILDS_CONTEXT_PATH }}/${{ env.DOCKER_AUTOBUILDS_DOCKERFILE_PATH }})" >> $GITHUB_OUTPUT
+          set -euo pipefail
+          echo "build_path=$CONTEXT" >> "$GITHUB_OUTPUT"
+          echo "dockerfile_path=$DOCKERFILE" >> "$GITHUB_OUTPUT"
+          echo "dockerfile_folder=$(dirname "$CONTEXT/$DOCKERFILE")" >> "$GITHUB_OUTPUT"
 
-      # Checkout the source code repository
-      - name: Checkout repository
-        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
-
-      # Configure the Docker image tags based on the Git reference.
-      # The configuration here will push the `main` branch as `latest` and version tags as semver tags.
-      # See https://github.com/docker/metadata-action?tab=readme-ov-file#semver
-      - name: Generate Docker image tags
-        id: meta
-        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
-        with:
-          images: ${{ env.DOCKER_REPOSITORY_NAME }}
-          tags: |
-            # set latest tag for main branch and upstream repository triggers
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.event_name == 'repository_dispatch' }}
-            type=semver,pattern={{version}}
-
-      # Configure QEMU for building images for non-native architectures
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      # Configure Docker Buildx
-      # To speed up your builds with Docker Build Cloud see https://docs.docker.com/build-cloud/ci/
+      # Native amd64/arm64 runners need no QEMU registration.
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+        uses: docker/setup-buildx-action@v3
 
-      # Log in to Docker Hub with your Docker Hub credentials stored in GitHub Secrets
+      # Log in only for publishing, never for pull-request validation.
       - name: Log in to Docker Hub
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      # Optionally run a post-checkout hook
+      # GitHub-only hooks: hooks/gh_*; Docker Hub's legacy hooks stay separate.
+      # Each hook in this job runs once per selected architecture.
       - name: Run post-checkout hook
         working-directory: ${{ steps.paths.outputs.dockerfile_folder }}
+        env:
+          DOCKER_TAG: ${{ matrix.tag }}
+          DOCKER_PLATFORM: ${{ matrix.platform }}
         run: |
-          path=hooks/post_checkout
-          if [ -f "$path" ]; then
-            echo "Running post-checkout hook..."
-            chmod +x "$path"
-            "$path"
-          else
-            echo "No post-checkout hook found at $path, skipping..."
-          fi
+          path=hooks/gh_post_checkout
+          if [ -f "$path" ]; then chmod +x "$path"; "./$path"; fi
 
-      # Optionally run a pre-build hook
       - name: Run pre-build hook
         working-directory: ${{ steps.paths.outputs.dockerfile_folder }}
+        env:
+          DOCKER_TAG: ${{ matrix.tag }}
+          DOCKER_PLATFORM: ${{ matrix.platform }}
         run: |
-          path=hooks/pre_build
-          if [ -f "$path" ]; then
-            echo "Running pre-build hook..."
-            chmod +x "$path"
-            "$path"
-          else
-            echo "No pre-build hook found at $path, skipping..."
-          fi
+          path=hooks/gh_pre_build
+          if [ -f "$path" ]; then chmod +x "$path"; "./$path"; fi
 
-      # Optionally run a pre-push hook
+      # Buildx builds and pushes in one step, so pre-push runs before building.
       - name: Run pre-push hook
         if: github.event_name != 'pull_request'
         working-directory: ${{ steps.paths.outputs.dockerfile_folder }}
+        env:
+          DOCKER_TAG: ${{ matrix.tag }}
+          DOCKER_PLATFORM: ${{ matrix.platform }}
         run: |
-          path=hooks/pre_push
-          if [ -f "$path" ]; then
-            echo "Running pre-push hook..."
-            chmod +x "$path"
-            "$path"
-          else
-            echo "No pre-push hook found at $path, skipping..."
-          fi
+          path=hooks/gh_pre_push
+          if [ -f "$path" ]; then chmod +x "$path"; "./$path"; fi
 
-      # Build and push the multi-platform Docker image
-      - name: Build and push Docker image
+      # Build each architecture by digest without creating temporary tags.
+      # PRs build without pushing images.
+      - name: Build and push architecture image
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: ${{ steps.paths.outputs.build_path }}
           file: ${{ steps.paths.outputs.dockerfile_path }}
-          platforms: ${{ vars.BUILD_PLATFORMS || 'linux/amd64,linux/arm64' }}
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=${{ env.DOCKER_REPOSITORY_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }},oci-mediatypes=false
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=${{ matrix.tag }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.tag }}
 
-      # Optionally run a post-build hook
+      # Save the digest for the manifest job.
+      - name: Export digest
+        if: github.event_name != 'pull_request'
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p "${RUNNER_TEMP}/digests"
+          echo "$DIGEST" > "${RUNNER_TEMP}/digests/${{ matrix.tag }}"
+
+      # Transfer the digest to the manifest job.
+      - name: Upload digest
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.tag }}
+          path: ${{ runner.temp }}/digests/${{ matrix.tag }}
+          if-no-files-found: error
+          retention-days: 1
+
+      # This hook runs after build/push, not between the two operations.
       - name: Run post-build hook
         working-directory: ${{ steps.paths.outputs.dockerfile_folder }}
+        env:
+          DOCKER_TAG: ${{ matrix.tag }}
+          DOCKER_PLATFORM: ${{ matrix.platform }}
         run: |
-          path=hooks/post_build
-          if [ -f "$path" ]; then
-            echo "Running post-build hook..."
-            chmod +x "$path"
-            "$path"
-          else
-            echo "No post-build hook found at $path, skipping..."
-          fi
+          path=hooks/gh_post_build
+          if [ -f "$path" ]; then chmod +x "$path"; "./$path"; fi
 
-      # Optionally run a post-push hook
+  # Wait for all architectures before publishing a combined manifest.
+  manifest:
+    needs: [prepare, build]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up paths
+        id: paths
+        env:
+          CONTEXT: ${{ env.DOCKER_AUTOBUILDS_CONTEXT_PATH }}
+          DOCKERFILE: ${{ env.DOCKER_AUTOBUILDS_DOCKERFILE_PATH }}
+        run: echo "dockerfile_folder=$(dirname "$CONTEXT/$DOCKERFILE")" >> "$GITHUB_OUTPUT"
+
+      # main, schedule, manual and upstream events publish latest.
+      # Semver releases publish version tags only; they do not overwrite latest.
+      - name: Generate Docker image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKER_REPOSITORY_NAME }}
+          flavor: |
+            latest=false
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.event_name == 'repository_dispatch' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
+            type=semver,pattern={{version}}
+
+      # Native amd64/arm64 runners need no QEMU registration.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Log in only for publishing, never for pull-request validation.
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      # Collect digests from all successful architecture builds.
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: digest-*
+          path: ${{ runner.temp }}/digests
+          merge-multiple: true
+
+      # Publish architecture-specific tags only for main-like builds.
+      # Version-tag releases do not modify the floating architecture tags.
+      - name: Publish architecture tags
+        if: github.ref == 'refs/heads/main' || github.event_name == 'repository_dispatch' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+        env:
+          IMAGE: ${{ env.DOCKER_REPOSITORY_NAME }}
+          ARCH_TAGS: ${{ needs.prepare.outputs.tags }}
+        run: |
+          set -euo pipefail
+          mapfile -t tags < <(jq -r 'reverse | .[]' <<< "$ARCH_TAGS")
+
+          for tag in "${tags[@]}"; do
+            digest="$(cat "${RUNNER_TEMP}/digests/${tag}")"
+
+            docker buildx imagetools create \
+              --prefer-index=false \
+              --tag "${IMAGE}:${tag}" \
+              "${IMAGE}@${digest}"
+          done
+
+      # Merge this run's architecture digests into the multi-platform image.
+      - name: Create multi-architecture manifest
+        env:
+          IMAGE: ${{ env.DOCKER_REPOSITORY_NAME }}
+          ARCH_TAGS: ${{ needs.prepare.outputs.tags }}
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          set -euo pipefail
+          args=()
+          sources=()
+
+          while IFS= read -r tag; do
+            [ -n "$tag" ] && args+=(--tag "$tag")
+          done <<< "$IMAGE_TAGS"
+
+          [ "${#args[@]}" -gt 0 ] || {
+            echo 'No image tags generated' >&2
+            exit 1
+          }
+
+          mapfile -t tags < <(jq -r '.[]' <<< "$ARCH_TAGS")
+
+          for tag in "${tags[@]}"; do
+            digest="$(cat "${RUNNER_TEMP}/digests/${tag}")"
+            sources+=("${IMAGE}@${digest}")
+          done
+
+          docker buildx imagetools create "${args[@]}" "${sources[@]}"
+
+      # Validate actual architecture metadata, not just registry availability.
+      - name: Verify published images
+        env:
+          IMAGE: ${{ env.DOCKER_REPOSITORY_NAME }}
+          ARCH_TAGS: ${{ needs.prepare.outputs.tags }}
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          set -euo pipefail
+          mapfile -t tags < <(jq -r '.[]' <<< "$ARCH_TAGS")
+          while IFS= read -r image_tag; do
+            [ -n "$image_tag" ] || continue
+            raw=$(docker buildx imagetools inspect --raw "$image_tag")
+            for tag in "${tags[@]}"; do
+              arch="$tag"
+              jq -e --arg arch "$arch" \
+                'any(.manifests[]?; .platform.os == "linux" and .platform.architecture == $arch)' \
+                <<< "$raw" >/dev/null || {
+                  # A one-platform publication can also be a direct image manifest.
+                  if [ "${#tags[@]}" -ne 1 ] || \
+                     [ "$(jq -r '.mediaType // ""' <<< "$raw")" != 'application/vnd.oci.image.manifest.v1+json' ] && \
+                     [ "$(jq -r '.mediaType // ""' <<< "$raw")" != 'application/vnd.docker.distribution.manifest.v2+json' ]; then
+                    echo "Missing platform $arch in $image_tag" >&2
+                    exit 1
+                  fi
+                }
+            done
+          done <<< "$IMAGE_TAGS"
+
+      # This hook runs once, after the manifest and architecture aliases exist.
+      # Remove legacy manifest-tool calls from hooks/gh_post_push.
       - name: Run post-push hook
-        if: github.event_name != 'pull_request'
         working-directory: ${{ steps.paths.outputs.dockerfile_folder }}
         run: |
-          path=hooks/post_push
-          if [ -f "$path" ]; then
-            echo "Running post-push hook..."
-            chmod +x "$path"
-            "$path"
-          else
-            echo "No post-push hook found at $path, skipping..."
-          fi
+          path=hooks/gh_post_push
+          if [ -f "$path" ]; then chmod +x "$path"; "./$path"; fi
 
-      # Trigger builds in downstream repositories after the image has been successfully built and pushed
+      # Trigger downstream repositories only after a successful publication.
       - name: Trigger downstream builds
-        if: github.event_name != 'pull_request' && vars.DOWNSTREAM_REPOS != '' && vars.DOWNSTREAM_REPOS != ' '
+        if: vars.DOWNSTREAM_REPOS != '' && vars.DOWNSTREAM_REPOS != ' '
         env:
           GH_TOKEN: ${{ secrets.GH_TRIGGER_TOKEN }}
           DOWNSTREAM_REPOS: ${{ vars.DOWNSTREAM_REPOS }}
         run: |
+          set -euo pipefail
           for repo in $DOWNSTREAM_REPOS; do
-            gh api \
-              --method POST \
+            gh api --method POST \
               "repos/${{ github.repository_owner }}/$repo/dispatches" \
               -f event_type=base-updated
           done

@@ -1,3 +1,12 @@
 #!/bin/bash
 
-echo "Running hook in app/hooks/post_push"
+set -euo pipefail
+
+if [ -e multiarch-manifest.yaml ]; then
+	curl -fL --retry 3 https://github.com/estesp/manifest-tool/releases/download/v2.2.2/binaries-manifest-tool-2.2.2.tar.gz | tar zxf - manifest-tool-linux-amd64
+
+	chmod +x manifest-tool-linux-amd64
+
+	./manifest-tool-linux-amd64 push from-spec multiarch-manifest.yaml
+fi
+
