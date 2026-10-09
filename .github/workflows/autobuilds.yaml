@@ -347,7 +347,11 @@ jobs:
         run: |
           set -euo pipefail
           for repo in $DOWNSTREAM_REPOS; do
+            case "$repo" in
+              */*) endpoint="repos/$repo/dispatches" ;;
+              *) endpoint="repos/${{ github.repository_owner }}/$repo/dispatches" ;;
+            esac
             gh api --method POST \
-              "repos/${{ github.repository_owner }}/$repo/dispatches" \
+              "$endpoint" \
               -f event_type=base-updated
           done
