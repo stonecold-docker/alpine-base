@@ -1,9 +1,0 @@
-#!/bin/bash
-
-set -euo pipefail
-
-if [ "$DOCKER_TAG" = "arm64" ]; then
-	docker run --privileged --rm tonistiigi/binfmt --install arm64
-
-	docker run --rm --platform linux/arm64 alpine:latest sh -c 'uname -m; echo "ARM64 execution OK"'
-fi

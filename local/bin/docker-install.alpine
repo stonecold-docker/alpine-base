@@ -74,17 +74,17 @@ fn_install_custom() {
 			echo "Installing goreman"
 			local URL=""
 			if [ -e /lib/ld-musl-x86_64.so.1 ]; then
-				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/goreman-musl-x64
+				URL=https://github.com/stonecold-docker-extras/dist-extras/raw/refs/heads/main/goreman-musl-x64
 			elif [ -e /lib/ld-musl-aarch64.so.1 ]; then
-				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/goreman-musl-aarch64
+				URL=https://github.com/stonecold-docker-extras/dist-extras/raw/refs/heads/main/goreman-musl-aarch64
 			elif [ -e /lib/ld-musl-armhf.so.1 ]; then
-				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/goreman-musl-armv7h
+				URL=https://github.com/stonecold-docker-extras/dist-extras/raw/refs/heads/main/goreman-musl-armv7h
 			elif [ -e /lib64/ld-linux-x86-64.so.2 ]; then
-				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/goreman-glibc-x64
+				URL=https://github.com/stonecold-docker-extras/dist-extras/raw/refs/heads/main/goreman-glibc-x64
 			elif [ -e /lib/ld-linux-aarch64.so.1 ]; then
-				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/goreman-glibc-aarch64
+				URL=https://github.com/stonecold-docker-extras/dist-extras/raw/refs/heads/main/goreman-glibc-aarch64
 			elif [ -e /lib/ld-linux-armhf.so.3 ]; then
-				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/goreman-glibc-armv7h
+				URL=https://github.com/stonecold-docker-extras/dist-extras/raw/refs/heads/main/goreman-glibc-armv7h
 			fi
 			wget --no-check-certificate "${URL}" -q -O /usr/local/bin/goreman
 			chmod 755 /usr/local/bin/goreman
@@ -92,7 +92,7 @@ fn_install_custom() {
 		fi
 		if [ "${PACKAGE_SHOREMAN}" = "Y" -a ! -e /usr/local/bin/shoreman ]; then
 			echo "Installing shoreman"
-			local URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/shoreman
+			local URL=https://github.com/stonecold-docker-extras/dist-extras/raw/refs/heads/main/shoreman
 			wget --no-check-certificate "${URL}" -q -O /usr/local/bin/shoreman
 			chmod 755 /usr/local/bin/shoreman
 			echo "OK"
@@ -101,11 +101,11 @@ fn_install_custom() {
 			echo "Installing gosu"
 			local URL=""
 			if [ -e /lib/ld-musl-x86_64.so.1 -o -e /lib64/ld-linux-x86-64.so.2 ]; then
-				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/gosu-amd64
+				URL=https://github.com/stonecold-docker-extras/dist-extras/raw/refs/heads/main/gosu-amd64
 			elif [ -e /lib/ld-musl-aarch64.so.1 -o -e /lib/ld-linux-aarch64.so.1 ]; then
-				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/gosu-arm64
+				URL=https://github.com/stonecold-docker-extras/dist-extras/raw/refs/heads/main/gosu-arm64
 			elif [ -e /lib/ld-musl-armhf.so.1 -o -e /lib/ld-linux-armhf.so.3 ]; then
-				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/gosu-armhf
+				URL=https://github.com/stonecold-docker-extras/dist-extras/raw/refs/heads/main/gosu-armhf
 			fi
 			wget --no-check-certificate "${URL}" -q -O /usr/local/bin/gosu
 			chmod 755 /usr/local/bin/gosu
@@ -115,17 +115,17 @@ fn_install_custom() {
 			echo "Installing su-exec"
 			local URL=""
 			if [ -e /lib/ld-musl-x86_64.so.1 ]; then
-				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/su-exec-musl-x64
+				URL=https://github.com/stonecold-docker-extras/dist-extras/raw/refs/heads/main/su-exec-musl-x64
 			elif [ -e /lib/ld-musl-aarch64.so.1 ]; then
-				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/su-exec-musl-aarch64
+				URL=https://github.com/stonecold-docker-extras/dist-extras/raw/refs/heads/main/su-exec-musl-aarch64
 			elif [ -e /lib/ld-musl-armhf.so.1 ]; then
-				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/su-exec-musl-armv7h
+				URL=https://github.com/stonecold-docker-extras/dist-extras/raw/refs/heads/main/su-exec-musl-armv7h
 			elif [ -e /lib64/ld-linux-x86-64.so.2 ]; then
-				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/su-exec-glibc-x64
+				URL=https://github.com/stonecold-docker-extras/dist-extras/raw/refs/heads/main/su-exec-glibc-x64
 			elif [ -e /lib/ld-linux-aarch64.so.1 ]; then
-				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/su-exec-glibc-aarch64
+				URL=https://github.com/stonecold-docker-extras/dist-extras/raw/refs/heads/main/su-exec-glibc-aarch64
 			elif [ -e /lib/ld-linux-armhf.so.3 ]; then
-				URL=https://bitbucket.org/forumi0721/docker-dist-extras/raw/master/su-exec-glibc-armv7h
+				URL=https://github.com/stonecold-docker-extras/dist-extras/raw/refs/heads/main/su-exec-glibc-armv7h
 			fi
 			wget --no-check-certificate "${URL}" -q -O /usr/local/bin/su-exec
 			chmod 755 /usr/local/bin/su-exec
