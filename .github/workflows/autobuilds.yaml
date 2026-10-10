@@ -338,6 +338,17 @@ jobs:
           path=hooks/gh_post_push
           if [ -f "$path" ]; then chmod +x "$path"; "./$path"; fi
 
+      # Synchronize GitHub README.md with Docker Hub Overview.
+      - name: Update Docker Hub README
+        if: github.ref == 'refs/heads/main'
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+          repository: ${{ env.DOCKER_REPOSITORY_NAME }}
+          readme-filepath: ./README.md
+          short-description: ${{ github.event.repository.description }}
+
       # Trigger downstream repositories only after a successful publication.
       - name: Trigger downstream builds
         if: vars.DOWNSTREAM_REPOS != '' && vars.DOWNSTREAM_REPOS != ' '
